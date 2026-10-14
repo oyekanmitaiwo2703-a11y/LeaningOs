@@ -88,7 +88,7 @@ textarea{min-height:86px;resize:vertical}
 <section class="page" id="roadmap"><div class="notice">This is a starting roadmap, not a rigid timetable. Check off completed steps, edit the details, or add a step tied to any resource.</div><button class="btn" onclick="addRoad()">+ Add roadmap step</button><div id="roadmapList" style="margin-top:14px"></div></section>
 <section class="page" id="daily"><div class="notice">Your daily session is generated from the next unfinished roadmap step. You do not need to build a plan from scratch. You can still adjust it if your day is unusually busy.</div><div class="auto-plan" id="autoPlanSummary"></div><div class="toolbar"><button class="btn" id="generateDay">↻ Generate / refresh today’s plan</button><button class="btn alt" id="editDayToggle">Edit today’s plan</button><span class="muted" style="align-self:center">Suggested session: 30–60 minutes, scaled to your available time.</span></div><div class="card" id="dailyEditor" style="display:none"><h3>Adjust today's session</h3><p class="muted" id="dailyDate"></p><div class="formgrid"><div class="field"><label>What will I learn?</label><input id="dlearn" placeholder="Generated from roadmap"></div><div class="field"><label>Resource</label><select id="dresource"></select></div><div class="field"><label>What will I practice?</label><input id="dpractice" placeholder="Generated from roadmap"></div><div class="field"><label>Content idea to capture</label><input id="dshare" placeholder="Generated from roadmap"></div><div class="field full"><label>Notes / questions</label><textarea id="dnotes"></textarea></div></div><div style="text-align:right;margin-top:12px"><button class="btn" id="saveDay">Save changes</button></div></div><div class="grid two" style="margin-top:14px"><div class="card"><h3>Today's checklist</h3><div id="checklist"></div><button class="btn alt" onclick="completeTodayAndNext()" style="margin-top:12px">Finish session & log learning</button></div><div class="card"><h3>Missed / unfinished</h3><p class="muted">Unfinished work stays visible. The next plan will prioritize overdue work before moving forward.</p><div id="missed"></div></div></div></section>
 <section class="page" id="log"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><h2 style="margin-bottom:3px">Learning log</h2><p class="muted">Record what you understood, what you practiced, and what comes next.</p></div><button class="btn" onclick="addLog()">+ Record session</button></div><div id="logs" style="margin-top:14px"></div></section>
-<section class="page" id="ai"><div class="hero"><div class="eyebrow" style="color:#d9d3ff">YOUR LEARNING COPILOT</div><h2>Think through your next move.</h2><p>A focused space to think, plan, and make progress. Use the built-in actions for your learning data; we’ll verify the live AI connection separately.</p></div><div class="notice"><b>AI connection: not tested yet.</b> The quick actions currently use your saved workspace data. We still need to test the secure Netlify AI function before relying on live AI answers. Keep API keys on the server, never in this HTML file.</div><div class="ai-shell"><div class="card chat-panel"><div id="chatMessages" class="chat-messages"><div class="bubble assistant">Hi! I can help you navigate your learning system. Try a quick action, or ask about your roadmap and resources. For now, I can answer using the data saved in this browser and run supported local actions.</div></div><div class="chat-compose"><textarea id="aiPrompt" placeholder="Ask about your roadmap, resources, progress…"></textarea><button class="btn" id="sendAI">Send</button></div></div><aside class="card"><h3>Quick actions</h3><button class="quick-action" onclick="runLocalAI('plan')">✦ Generate today's plan</button><button class="quick-action" onclick="runLocalAI('roadmap')">⌁ Summarize my roadmap</button><button class="quick-action" onclick="runLocalAI('unfinished')">◷ Show missed / unfinished work</button><button class="quick-action" onclick="runLocalAI('resources')">▤ Review my active resources</button><button class="quick-action" onclick="addResource()">＋ Add a resource</button><button class="quick-action" onclick="addRoad()">＋ Add a roadmap step</button><p class="muted" style="margin-top:14px">When connected to a real AI model, this tab can be expanded to interpret requests and update editable features after confirming important changes.</p></aside></div></section>
+<section class="page" id="ai"><div class="hero"><div class="eyebrow" style="color:#d9d3ff">YOUR LEARNING COPILOT</div><h2>Think through your next move.</h2><p>Ask Gemini about your learning workspace. Your question and current saved learning data are sent securely through the Netlify AI function.</p></div><div class="notice"><b>Gemini connection:</b> The Send button calls the Netlify function at <code>/.netlify/functions/ai</code>. The connection must be verified after deployment. Quick actions still use local workspace data. Keep API keys on the server, never in this HTML file.</div><div class="ai-shell"><div class="card chat-panel"><div id="chatMessages" class="chat-messages"><div class="bubble assistant">Hi! I can help you navigate your learning system. Try a quick action, or ask about your roadmap and resources. For now, I can answer using the data saved in this browser and run supported local actions.</div></div><div class="chat-compose"><textarea id="aiPrompt" placeholder="Ask about your roadmap, resources, progress…"></textarea><button class="btn" id="sendAI">Send</button></div></div><aside class="card"><h3>Quick actions</h3><button class="quick-action" onclick="runLocalAI('plan')">✦ Generate today's plan</button><button class="quick-action" onclick="runLocalAI('roadmap')">⌁ Summarize my roadmap</button><button class="quick-action" onclick="runLocalAI('unfinished')">◷ Show missed / unfinished work</button><button class="quick-action" onclick="runLocalAI('resources')">▤ Review my active resources</button><button class="quick-action" onclick="addResource()">＋ Add a resource</button><button class="quick-action" onclick="addRoad()">＋ Add a roadmap step</button><p class="muted" style="margin-top:14px">When connected to a real AI model, this tab can be expanded to interpret requests and update editable features after confirming important changes.</p></aside></div></section>
 </main></div>
 <div class="modal" id="modal"><div class="dialog"><div class="dialoghead"><h2 id="mTitle">Edit</h2><button class="btn alt" onclick="closeModal()">Close</button></div><form id="form"><div id="fields"></div><div class="foot"><button type="button" class="btn alt" onclick="closeModal()">Cancel</button><button class="btn" type="submit">Save changes</button></div></form></div></div>
 <script>
@@ -145,8 +145,54 @@ function completeTodayAndNext(){let p=days[today()]||{};if(!p.learn&&!p.practice
 function checkDay(i,v){let p=days[today()]||{};p.checked=p.checked||{};p.checked[i]=v;days[today()]=p;save()}function carry(d){days[today()]={...days[d],checked:{},generated:false};save();go('daily')}
 function addRoad(){roadForm({},'road')}
 function localAIReply(q){let t=q.toLowerCase();if(/plan|today|daily|schedule/.test(t)){makePlan(true);return 'I generated today’s learning session from the next unfinished roadmap step. Open Daily learning to review it.'}if(/unfinished|missed|overdue|incomplete/.test(t)){let old=Object.entries(days).filter(([d,p])=>d<today()&&[p.learn,p.practice,p.share].some((v,i)=>v&&!p.checked?.[i]));let pending=road.filter(x=>!x.done);return `Unfinished roadmap steps (${pending.length}):\\n${pending.slice(0,8).map(x=>'• '+x.title+' — '+rn(x.resourceId)).join('\\n')||'None.'}\\n\\nMissed daily plans (${old.length}):\\n${old.slice(-5).map(([d,p])=>'• '+d+': '+p.learn).join('\\n')||'None recorded.'}`}if(/roadmap|priority|next step|progress/.test(t)){let pending=road.filter(x=>!x.done);return `Your roadmap has ${road.length} steps; ${road.filter(x=>x.done).length} completed and ${pending.length} remaining.\\n\\nNext priorities:\\n${pending.slice(0,6).map((x,i)=>`${i+1}. ${x.title} (${x.status}) — ${rn(x.resourceId)}`).join('\\n')||'All roadmap steps are complete.'}`}if(/resource|course|learn|active/.test(t)){let active=resources.filter(r=>['Active','Next'].includes(r.status));return `You have ${resources.length} resources in total. These are marked Active or Next:\\n${active.map(r=>'• '+r.name+' — '+r.status).join('\\n')}`}return 'I can currently use your saved data for roadmap summaries, resource reviews, unfinished-work checks, and daily-plan generation. For open-ended questions and natural-language edits across the whole workspace, we need to connect a real AI model through a secure backend.'}
-function addChatBubble(text,who){let d=document.createElement('div');d.className='bubble '+who;d.textContent=text;$('chatMessages').appendChild(d);$('chatMessages').scrollTop=$('chatMessages').scrollHeight}
-function sendAI(){let q=$('aiPrompt').value.trim();if(!q)return;addChatBubble(q,'user');$('aiPrompt').value='';addChatBubble(localAIReply(q),'assistant')}
+function addChatBubble(text,who){let d=document.createElement('div');d.className='bubble '+who;d.textContent=text;$('chatMessages').appendChild(d);$('chatMessages').scrollTop=$('chatMessages').scrollHeight;return d}
+async function sendAI(){
+  const input = $('aiPrompt');
+  const q = input.value.trim();
+  if (!q) return;
+
+  addChatBubble(q, 'user');
+  input.value = '';
+
+  const replyBubble = addChatBubble('Thinking…', 'assistant');
+  const sendButton = $('sendAI');
+  sendButton.disabled = true;
+
+  try {
+    const response = await fetch('/.netlify/functions/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: q,
+        appData: {
+          resources,
+          roadmap: road,
+          logs,
+          dailyPlans: days,
+          today: today()
+        }
+      })
+    });
+
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error('The server returned an unreadable response.');
+    }
+
+    if (!response.ok) {
+      throw new Error(data.error || `AI request failed (${response.status}).`);
+    }
+
+    replyBubble.textContent = data.answer || 'The AI returned an empty response. Please try again.';
+  } catch (error) {
+    replyBubble.textContent = `I couldn't connect to the AI. ${error.message || 'Please try again.'}`;
+  } finally {
+    sendButton.disabled = false;
+    input.focus();
+  }
+}
 function runLocalAI(action){let q={plan:'Generate today’s plan',roadmap:'Summarize my roadmap',unfinished:'Show missed and unfinished work',resources:'Review my active resources'}[action]||action;addChatBubble(q,'user');addChatBubble(localAIReply(q),'assistant');if(action==='plan')go('daily')}
 
 function renderLogs(){let a=[...logs].sort((x,y)=>y.date.localeCompare(x.date));$('logs').innerHTML=a.map(l=>`<div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:10px"><h3>${esc(l.title)}</h3><span class="tag">${esc(l.date)}</span></div><p class="muted">Resource: ${esc(rn(l.resourceId))} · ${esc(l.time||'')}</p><div class="row"><b>Learned</b><div class="muted">${esc(l.learned||'—')}</div></div><div class="row"><b>Practice</b><div class="muted">${esc(l.practice||'—')}</div></div><div class="row"><b>Next step / content idea</b><div class="muted">${esc(l.next||'—')}</div></div><button class="btn alt" onclick="editLog('${l.id}')">Edit</button> <button class="btn alt" onclick="delLog('${l.id}')">Delete</button></div>`).join('')||'<div class="card muted">No sessions recorded yet. Record your first one after learning.</div>';$('latest').innerHTML=a.slice(0,2).map(l=>`<div class="row"><strong>${esc(l.title)}</strong><span class="muted">${esc(l.learned||'Session recorded')}</span></div>`).join('')||'<p class="muted">Your captured learning will appear here.</p>'}
